@@ -1,0 +1,1939 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Ежедневник дефектолога — v9</title>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+  <style>
+    :root {
+      --bg: #ece8e1;
+      --paper: #fdfcf9;
+      --line: #e6e2d8;
+      --spring-bg: #1e242b;
+      --ink: #1e293b;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --earned: #15803d;
+      --earned-bg: #dcfce7;
+      --prepaid: #0369a1;
+      --prepaid-bg: #e0f2fe;
+      --missed: #b91c1c;
+      --border: #d6d1c7;
+      --nav-bg: #181c20;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      padding-bottom: 76px;
+      line-height: 1.35;
+    }
+
+    .notebook-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: #f5f2eb;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .month-week-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 5px 10px;
+    }
+
+    .month-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .week-sub {
+      font-size: 0.74rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .topbar-btns {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    button, select, input, textarea {
+      font-family: inherit;
+      font-size: 16px;
+    }
+
+    .ui-btn {
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 9px;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+
+    .ui-btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .ui-btn.danger-soft {
+      color: var(--missed);
+      background: #fff5f5;
+      border-color: #fecaca;
+    }
+
+    .earned-strip {
+      max-width: 1180px;
+      margin: 10px auto 0;
+      padding: 0 10px;
+    }
+
+    .earned-box {
+      background: var(--earned-bg);
+      border: 1px solid #86efac;
+      color: var(--earned);
+      border-radius: 12px;
+      padding: 9px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .earned-big {
+      font-size: 1.08rem;
+      font-weight: 800;
+    }
+
+    .notebook-wrap {
+      max-width: 1180px;
+      margin: 10px auto 0;
+      padding: 0 8px;
+    }
+
+    .spread {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 24px 1fr;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    @media (max-width: 720px) {
+      .spread {
+        grid-template-columns: 1fr 14px 1fr;
+        border-radius: 10px;
+      }
+    }
+
+    .page-col {
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--paper) 0px,
+        var(--paper) 27px,
+        var(--line) 27px,
+        var(--line) 28px
+      );
+      padding: 8px 8px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .spine {
+      background: linear-gradient(90deg, #cfc9bd 0%, var(--spring-bg) 45%, #374151 55%, #cfc9bd 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-evenly;
+      padding: 12px 0;
+      user-select: none;
+    }
+
+    .ring {
+      width: 14px;
+      height: 6px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+    }
+
+    @media (max-width: 720px) {
+      .ring {
+        width: 9px;
+        height: 5px;
+      }
+    }
+
+    .day-row {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 6px;
+      align-items: start;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid #e5e0d5;
+      border-radius: 10px;
+      padding: 6px;
+    }
+
+    .day-row.is-today {
+      border-color: var(--accent);
+      background: rgba(239, 246, 255, 0.88);
+    }
+
+    .day-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 2px;
+      border-radius: 8px;
+      background: #f5f2eb;
+      border: 1px solid #e2ddd2;
+      text-align: center;
+    }
+
+    .day-row.is-today .day-badge {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .day-wd {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .day-num {
+      font-size: 1.05rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-top: 1px;
+    }
+
+    .day-events {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .ev-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid #94a3b8;
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ev-card.happened-yes {
+      border-left-color: var(--earned);
+      background: #f8fff9;
+    }
+
+    .ev-card.happened-prepaid {
+      border-left-color: var(--prepaid);
+      background: #f3f9ff;
+    }
+
+    .ev-card.happened-no {
+      border-left-color: var(--missed);
+      background: #fff9f9;
+      opacity: 0.88;
+    }
+
+    .ev-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .ev-main-text {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--ink);
+      cursor: pointer;
+      word-break: break-word;
+    }
+
+    .ev-time {
+      color: var(--accent);
+      font-weight: 800;
+      margin-right: 3px;
+    }
+
+    .ev-pack-tag {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: var(--prepaid-bg);
+      color: var(--prepaid);
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .ev-del-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0 4px;
+      line-height: 1.2;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .ev-del-btn:hover {
+      color: var(--missed);
+    }
+
+    .ev-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .ev-price {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .ev-select {
+      font-size: 0.75rem !important;
+      padding: 3px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      font-weight: 700;
+      color: var(--ink);
+      max-width: 100%;
+    }
+
+    .ev-note {
+      font-size: 0.75rem;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 3px 6px;
+      border-radius: 5px;
+      word-break: break-word;
+    }
+
+    .empty-day-hint {
+      font-size: 0.76rem;
+      color: #94a3b8;
+      padding: 6px 4px;
+    }
+
+    .summary-sheet {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 0.82rem;
+    }
+
+    .summary-sheet-title {
+      font-weight: 800;
+      margin-bottom: 5px;
+      font-size: 0.88rem;
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .summary-line:last-child {
+      border-bottom: none;
+      font-weight: 800;
+      color: var(--earned);
+      font-size: 0.9rem;
+      padding-top: 5px;
+    }
+
+    .panel-container {
+      max-width: 820px;
+      margin: 12px auto 0;
+      padding: 0 10px;
+    }
+
+    .sheet-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+      margin-bottom: 14px;
+    }
+
+    .sheet-card h2 {
+      font-size: 1.08rem;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      margin-bottom: 11px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--ink);
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .field textarea {
+      min-height: 68px;
+      resize: vertical;
+    }
+
+    .grid-2-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .prepaid-box {
+      background: var(--prepaid-bg);
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 11px;
+      font-size: 0.84rem;
+      color: #0c4a6e;
+    }
+
+    .prepaid-balance-pill {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1px solid #7dd3fc;
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--prepaid);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .submit-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .secondary-full-btn {
+      width: 100%;
+      margin-top: 7px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f1f5f9;
+      color: var(--ink);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .status-banner {
+      margin-top: 10px;
+      padding: 8px 11px;
+      border-radius: 9px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--earned-bg);
+      color: var(--earned);
+    }
+
+    .child-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #fafafa;
+    }
+
+    .child-item-name {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .child-item-meta {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .child-prepaid-tag {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 3px 8px;
+      border-radius: 7px;
+      background: var(--prepaid-bg);
+      color: var(--prepaid);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .child-item-note {
+      margin-top: 6px;
+      font-size: 0.84rem;
+      background: #fff;
+      border-left: 3px solid var(--accent);
+      padding: 6px 8px;
+      border-radius: 6px;
+    }
+
+    .att-list {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .att-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 5px 8px;
+    }
+
+    .att-open-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .att-thumb {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .child-item-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background: var(--nav-bg);
+      color: #cbd5e1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+      border-top: 1px solid #2d343c;
+    }
+
+    .nav-item {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 2px;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: #fff;
+    }
+
+    .nav-icon {
+      font-size: 1.15rem;
+      line-height: 1.1;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 780px;
+      max-height: 86vh;
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .modal-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .modal-img {
+      max-width: 100%;
+      max-height: 68vh;
+      display: block;
+      margin: 0 auto;
+      border-radius: 8px;
+    }
+
+    .modal-text {
+      white-space: pre-wrap;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .modal-docx {
+      background: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      font-size: 0.92rem;
+    }
+
+    .modal-pdf {
+      width: 100%;
+      height: 66vh;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header class="notebook-topbar">
+    <div class="month-week-box">
+      <button type="button" class="ui-btn" id="prevWeekBtn">‹</button>
+      <div>
+        <div class="month-title" id="monthTitle">Нояб. 2026 г.</div>
+        <div class="week-sub" id="weekSubTitle">Неделя</div>
+      </div>
+      <button type="button" class="ui-btn" id="nextWeekBtn">›</button>
+    </div>
+
+    <div class="topbar-btns">
+      <input type="date" id="focusDateInput" class="ui-btn" style="padding:5px 8px;" />
+      <button type="button" class="ui-btn" id="exportBtn">Экспорт</button>
+      <button type="button" class="ui-btn" id="importBtn">Импорт</button>
+      <input type="file" id="importFileInput" accept=".json" hidden />
+    </div>
+  </header>
+
+  <div class="earned-strip">
+    <div class="earned-box">
+      <span>Заработано за неделю (фактически оплачено): <span class="earned-big" id="earnedWeekVal">0 ₽</span></span>
+      <span style="font-size:0.8rem;">Занятий: <strong id="countWeekVal">0</strong></span>
+    </div>
+  </div>
+
+  <!-- РАЗДЕЛ 1: РАЗВОРОТ БЛОКНОТА -->
+  <main class="notebook-wrap" id="view-calendar">
+    <div class="spread">
+      <div class="page-col" id="leftPageCol"></div>
+      <div class="spine" aria-hidden="true">
+        <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+        <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+        <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+        <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+      </div>
+      <div class="page-col" id="rightPageCol"></div>
+    </div>
+  </main>
+
+  <!-- РАЗДЕЛ 2: ЗАПИСЬ НА ЗАНЯТИЕ -->
+  <section class="panel-container hidden" id="view-booking">
+    <div class="sheet-card">
+      <h2 id="lessonFormTitle">Записать на занятие</h2>
+      <form id="lessonForm">
+        <input type="hidden" id="editLessonId" />
+
+        <div class="field">
+          <label for="lessonChildSelect">Ребенок</label>
+          <select id="lessonChildSelect" required></select>
+        </div>
+
+        <div class="grid-2-cols">
+          <div class="field">
+            <label for="lessonDate">Дата</label>
+            <input type="date" id="lessonDate" required />
+          </div>
+          <div class="field">
+            <label for="lessonTime">Время</label>
+            <input type="time" id="lessonTime" required />
+          </div>
+        </div>
+
+        <div class="grid-2-cols">
+          <div class="field">
+            <label for="lessonDuration">Длительность (мин)</label>
+            <input type="number" id="lessonDuration" min="5" max="240" step="5" value="40" required />
+          </div>
+          <div class="field">
+            <label for="lessonPrice">Стоимость 1 занятия (₽)</label>
+            <input type="number" id="lessonPrice" min="0" step="50" value="900" required />
+          </div>
+        </div>
+
+        <div class="prepaid-box">
+          <div>
+            <strong>Оплата пакета занятий наперед:</strong> укажите, за сколько занятий (включая это) внесли оплату, и сколько реально получено денег. Последующие занятия получат пометку <code>2 из 3</code>, <code>3 из 3</code> и т.д.
+          </div>
+          <div class="prepaid-balance-pill" id="prepaidBalanceHint">Остаток предоплаты у ребенка: 0 занятий</div>
+
+          <div class="grid-2-cols" style="margin-top:8px;">
+            <div class="field" style="margin-bottom:0;">
+              <label for="lessonPaidSessionsCount">Оплачено занятий (вкл. это)</label>
+              <input type="number" id="lessonPaidSessionsCount" min="0" max="50" step="1" value="1" />
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label for="lessonPaidAmount">Фактически получено (₽)</label>
+              <input type="number" id="lessonPaidAmount" min="0" step="50" value="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="lessonHappened">Статус занятия</label>
+          <select id="lessonHappened">
+            <option value="pending">Ожидается</option>
+            <option value="yes">Было (оплата внесена)</option>
+            <option value="prepaid">Было (в счет ранней предоплаты)</option>
+            <option value="no">Не было</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="lessonNote">Заметки</label>
+          <textarea id="lessonNote" placeholder="Комментарий, домашнее задание, результат..."></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn" id="lessonSubmitBtn">Сохранить в расписание</button>
+        <button type="button" class="secondary-full-btn hidden" id="cancelLessonEditBtn">Отменить редактирование</button>
+        <div class="status-banner hidden" id="lessonFeedback"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- РАЗДЕЛ 3: КАРТОЧКИ ДЕТЕЙ И РОДИТЕЛЕЙ -->
+  <section class="panel-container hidden" id="view-children">
+    <div class="sheet-card">
+      <h2 id="childFormTitle">Новая карточка ребенка</h2>
+      <form id="childForm">
+        <input type="hidden" id="editChildId" />
+
+        <div class="field">
+          <label for="childFullName">Фамилия и имя ребенка</label>
+          <input type="text" id="childFullName" placeholder="Например: Прокудин Саша" required />
+        </div>
+
+        <div class="field">
+          <label for="parentFullName">Фамилия и имя родителя</label>
+          <input type="text" id="parentFullName" placeholder="Например: Прокудина Елена" required />
+        </div>
+
+        <div class="field">
+          <label for="parentPhone">Телефон</label>
+          <input type="tel" id="parentPhone" placeholder="+7 (999) 000-00-00" required />
+        </div>
+
+        <div class="grid-2-cols">
+          <div class="field">
+            <label for="childDefaultDuration">Длит. по умолч. (мин)</label>
+            <input type="number" id="childDefaultDuration" min="5" max="240" step="5" value="40" />
+          </div>
+          <div class="field">
+            <label for="childDefaultPrice">Цена по умолч. (₽)</label>
+            <input type="number" id="childDefaultPrice" min="0" step="50" value="900" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="childNotes">Заметки по ребенку</label>
+          <textarea id="childNotes" placeholder="Особенности, запрос, рекомендации..."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="childFilesInput">Фото или файлы (текст, .docx, PDF)</label>
+          <input type="file" id="childFilesInput" multiple accept="image/*,.txt,.csv,.md,.json,.doc,.docx,.pdf" />
+          <div class="att-list" id="draftFilesList"></div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="childSubmitBtn">Добавить карточку ребенка</button>
+        <button type="button" class="secondary-full-btn hidden" id="cancelChildEditBtn">Отменить редактирование</button>
+        <div class="status-banner hidden" id="childFeedback"></div>
+      </form>
+    </div>
+
+    <div class="sheet-card">
+      <h2>Картотека детей (<span id="childrenCountBadge">0</span>)</h2>
+      <div class="field">
+        <input type="search" id="searchChildInput" placeholder="Поиск по ребенку, родителю, телефону или заметкам..." />
+      </div>
+      <div id="childrenListContainer"></div>
+    </div>
+  </section>
+
+  <!-- Модалка просмотра файла без скачивания -->
+  <div class="modal-bg hidden" id="fileModal">
+    <div class="modal-box">
+      <div class="modal-top">
+        <strong id="modalTitle" style="font-size:0.95rem;">Файл</strong>
+        <div style="display:flex; gap:6px;">
+          <a id="modalDownloadBtn" class="ui-btn" style="text-decoration:none;" download>Скачать</a>
+          <button type="button" class="ui-btn" id="closeModalBtn">Закрыть</button>
+        </div>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- Нижняя панель навигации -->
+  <nav class="bottom-nav">
+    <button type="button" class="nav-item active" data-nav="calendar">
+      <span class="nav-icon">📒</span>
+      <span>Ежедневник</span>
+    </button>
+    <button type="button" class="nav-item" data-nav="booking">
+      <span class="nav-icon">➕</span>
+      <span>Записать</span>
+    </button>
+    <button type="button" class="nav-item" data-nav="children">
+      <span class="nav-icon">👶</span>
+      <span>Дети</span>
+    </button>
+    <button type="button" class="nav-item" id="navTodayBtn">
+      <span class="nav-icon">📅</span>
+      <span>Сегодня</span>
+    </button>
+  </nav>
+
+  <script>
+    const STORAGE_KEY = "defectolog_journal_v9";
+    const DEFAULT_DURATION = 40;
+    const DEFAULT_PRICE = 900;
+    const MAX_FILE_BYTES = 1.5 * 1024 * 1024;
+
+    let memoryFallbackState = { children: [], lessons: [] };
+    const state = loadState();
+    let draftFiles = [];
+    let activeBlobUrl = null;
+
+    const todayStr = getLocalTodayStr();
+    let focusDateStr = todayStr;
+    let currentNav = "calendar";
+
+    const els = {
+      monthTitle: document.getElementById("monthTitle"),
+      weekSubTitle: document.getElementById("weekSubTitle"),
+      focusDateInput: document.getElementById("focusDateInput"),
+      prevWeekBtn: document.getElementById("prevWeekBtn"),
+      nextWeekBtn: document.getElementById("nextWeekBtn"),
+      earnedWeekVal: document.getElementById("earnedWeekVal"),
+      countWeekVal: document.getElementById("countWeekVal"),
+      leftPageCol: document.getElementById("leftPageCol"),
+      rightPageCol: document.getElementById("rightPageCol"),
+
+      viewCalendar: document.getElementById("view-calendar"),
+      viewBooking: document.getElementById("view-booking"),
+      viewChildren: document.getElementById("view-children"),
+      navItems: document.querySelectorAll(".nav-item[data-nav]"),
+      navTodayBtn: document.getElementById("navTodayBtn"),
+
+      lessonForm: document.getElementById("lessonForm"),
+      lessonFormTitle: document.getElementById("lessonFormTitle"),
+      editLessonId: document.getElementById("editLessonId"),
+      lessonChildSelect: document.getElementById("lessonChildSelect"),
+      lessonDate: document.getElementById("lessonDate"),
+      lessonTime: document.getElementById("lessonTime"),
+      lessonDuration: document.getElementById("lessonDuration"),
+      lessonPrice: document.getElementById("lessonPrice"),
+      lessonPaidSessionsCount: document.getElementById("lessonPaidSessionsCount"),
+      lessonPaidAmount: document.getElementById("lessonPaidAmount"),
+      prepaidBalanceHint: document.getElementById("prepaidBalanceHint"),
+      lessonHappened: document.getElementById("lessonHappened"),
+      lessonNote: document.getElementById("lessonNote"),
+      lessonSubmitBtn: document.getElementById("lessonSubmitBtn"),
+      cancelLessonEditBtn: document.getElementById("cancelLessonEditBtn"),
+      lessonFeedback: document.getElementById("lessonFeedback"),
+
+      childForm: document.getElementById("childForm"),
+      childFormTitle: document.getElementById("childFormTitle"),
+      editChildId: document.getElementById("editChildId"),
+      childFullName: document.getElementById("childFullName"),
+      parentFullName: document.getElementById("parentFullName"),
+      parentPhone: document.getElementById("parentPhone"),
+      childDefaultDuration: document.getElementById("childDefaultDuration"),
+      childDefaultPrice: document.getElementById("childDefaultPrice"),
+      childNotes: document.getElementById("childNotes"),
+      childFilesInput: document.getElementById("childFilesInput"),
+      draftFilesList: document.getElementById("draftFilesList"),
+      childSubmitBtn: document.getElementById("childSubmitBtn"),
+      cancelChildEditBtn: document.getElementById("cancelChildEditBtn"),
+      childFeedback: document.getElementById("childFeedback"),
+      childrenCountBadge: document.getElementById("childrenCountBadge"),
+      searchChildInput: document.getElementById("searchChildInput"),
+      childrenListContainer: document.getElementById("childrenListContainer"),
+
+      fileModal: document.getElementById("fileModal"),
+      modalTitle: document.getElementById("modalTitle"),
+      modalDownloadBtn: document.getElementById("modalDownloadBtn"),
+      modalContent: document.getElementById("modalContent"),
+      closeModalBtn: document.getElementById("closeModalBtn"),
+
+      exportBtn: document.getElementById("exportBtn"),
+      importBtn: document.getElementById("importBtn"),
+      importFileInput: document.getElementById("importFileInput")
+    };
+
+    function getLocalTodayStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function normalizeLesson(item) {
+      const happened =
+        item && ["yes", "prepaid", "no", "pending"].includes(item.happened)
+          ? item.happened
+          : item && (item.paid === true || item.status === "paid")
+            ? "yes"
+            : item && item.status === "cancelled"
+              ? "no"
+              : "pending";
+
+      let paidAmount = Number(item && item.paidAmount !== undefined ? item.paidAmount : NaN);
+      if (Number.isNaN(paidAmount)) {
+        paidAmount = happened === "yes" ? Number(item.price || 0) : 0;
+      }
+
+      const paidSessionsCount = Math.max(
+        0,
+        Number(item && item.paidSessionsCount !== undefined ? item.paidSessionsCount : happened === "yes" ? 1 : 0)
+      );
+
+      return { ...item, happened, paidAmount, paidSessionsCount };
+    }
+
+    function loadState() {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { children: [], lessons: [] };
+        const parsed = JSON.parse(raw);
+        const children = Array.isArray(parsed.children) ? parsed.children : [];
+        const lessons = Array.isArray(parsed.lessons) ? parsed.lessons.map(normalizeLesson) : [];
+        memoryFallbackState = { children, lessons };
+        return { children, lessons };
+      } catch {
+        return {
+          children: [...memoryFallbackState.children],
+          lessons: [...memoryFallbackState.lessons]
+        };
+      }
+    }
+
+    function saveState() {
+      memoryFallbackState = {
+        children: [...state.children],
+        lessons: [...state.lessons]
+      };
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        // Резерв в памяти
+      }
+      return true;
+    }
+
+    function showBanner(el, text) {
+      if (!el) return;
+      el.textContent = text;
+      el.classList.remove("hidden");
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.add("hidden"), 3200);
+    }
+
+    function formatMoney(num) {
+      return Number(num || 0).toLocaleString("ru-RU") + " ₽";
+    }
+
+    function formatDateRu(iso) {
+      if (!iso) return "";
+      const [y, m, d] = iso.split("-");
+      return `${d}.${m}.${y}`;
+    }
+
+    function parseIso(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function toIso(dt) {
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    }
+
+    function addDays(iso, days) {
+      const dt = parseIso(iso);
+      dt.setDate(dt.getDate() + days);
+      return toIso(dt);
+    }
+
+    function getMonday(iso) {
+      const dt = parseIso(iso);
+      const day = dt.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      dt.setDate(dt.getDate() + diff);
+      return toIso(dt);
+    }
+
+    function getMonthShortRu(iso) {
+      const months = ["Янв.", "Февр.", "Март", "Апр.", "Май", "Июнь", "Июль", "Авг.", "Сент.", "Окт.", "Нояб.", "Дек."];
+      const dt = parseIso(iso);
+      return `${months[dt.getMonth()]} ${dt.getFullYear()} г.`;
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function getChildById(id) {
+      return state.children.find((c) => c.id === id);
+    }
+
+    // Строит карту пакетов предоплаты по каждому ребенку:
+    // возвращает Map(lessonId -> { label: "1 из 3" | "2 из 3" | "3 из 3", remainingCredits: number })
+    function computePrepaidMap() {
+      const map = new Map();
+      const remainingByChild = new Map();
+
+      const byChild = new Map();
+      state.lessons.map(normalizeLesson).forEach((l) => {
+        if (!byChild.has(l.childId)) byChild.set(l.childId, []);
+        byChild.get(l.childId).push(l);
+      });
+
+      byChild.forEach((childLessons, childId) => {
+        // Сортируем по дате и времени, чтобы пакеты и списания шли в хронологическом порядке
+        const ordered = [...childLessons].sort((a, b) =>
+          `${a.date}T${a.time || "00:00"}`.localeCompare(`${b.date}T${b.time || "00:00"}`)
+        );
+
+        let activePackTotal = 0; // размер текущего пакета (например, 3)
+        let activePackUsed = 0;  // сколько занятий из него уже прошло (включая стартовое)
+        let extraCredits = 0;    // свободные предоплаченные занятия сверх текущего пакета
+
+        for (const l of ordered) {
+          if (l.happened === "no") continue;
+
+          if (l.paidSessionsCount > 1) {
+            // Открывается новый пакет предоплаты на N занятий (1-е — текущее, (N-1) — последующие)
+            activePackTotal = l.paidSessionsCount;
+            activePackUsed = 1;
+            extraCredits += l.paidSessionsCount - 1;
+            map.set(l.id, {
+              label: `1 из ${activePackTotal}`,
+              packTotal: activePackTotal,
+              packIndex: 1
+            });
+          } else if (l.happened === "prepaid") {
+            extraCredits = Math.max(0, extraCredits - 1);
+            if (activePackTotal > 0 && activePackUsed < activePackTotal) {
+              activePackUsed += 1;
+              map.set(l.id, {
+                label: `${activePackUsed} из ${activePackTotal}`,
+                packTotal: activePackTotal,
+                packIndex: activePackUsed
+              });
+            } else {
+              map.set(l.id, {
+                label: "По предоплате",
+                packTotal: 0,
+                packIndex: 0
+              });
+            }
+          }
+        }
+
+        remainingByChild.set(childId, Math.max(0, extraCredits));
+      });
+
+      return { map, remainingByChild };
+    }
+
+    function getRemainingPrepaidCredits(childId, excludeLessonId = null) {
+      if (!childId) return 0;
+      const childLessons = state.lessons
+        .map(normalizeLesson)
+        .filter((l) => l.childId === childId && l.id !== excludeLessonId);
+
+      let credits = 0;
+      for (const l of childLessons) {
+        if (l.happened === "no") continue;
+        if (l.paidSessionsCount > 1) {
+          credits += l.paidSessionsCount - 1;
+        }
+        if (l.happened === "prepaid") {
+          credits -= 1;
+        }
+      }
+      return Math.max(0, credits);
+    }
+
+    function getActualReceived(l) {
+      const item = normalizeLesson(l);
+      if (item.happened === "no") return 0;
+      return Number(item.paidAmount || 0);
+    }
+
+    function updatePrepaidUIForForm(applyAutoPrepaid = false) {
+      const childId = els.lessonChildSelect.value;
+      const editId = els.editLessonId.value || null;
+      const remaining = getRemainingPrepaidCredits(childId, editId);
+
+      els.prepaidBalanceHint.textContent =
+        remaining > 0
+          ? `Остаток предоплаты у ребенка: ${remaining} занят.`
+          : `Остаток предоплаты у ребенка: 0 занятий`;
+
+      if (applyAutoPrepaid && !editId) {
+        if (remaining > 0) {
+          els.lessonHappened.value = "prepaid";
+          els.lessonPaidSessionsCount.value = "0";
+          els.lessonPaidAmount.value = "0";
+        } else {
+          const price = Number(els.lessonPrice.value) || 0;
+          const cnt = Math.max(1, Number(els.lessonPaidSessionsCount.value) || 1);
+          if (els.lessonHappened.value === "prepaid") {
+            els.lessonHappened.value = "pending";
+          }
+          if (els.lessonHappened.value === "yes") {
+            els.lessonPaidAmount.value = String(price * cnt);
+          }
+        }
+      }
+    }
+
+    function setActiveNav(navName) {
+      currentNav = navName;
+      els.navItems.forEach((b) => b.classList.toggle("active", b.dataset.nav === navName));
+
+      els.viewCalendar.classList.toggle("hidden", navName !== "calendar");
+      els.viewBooking.classList.toggle("hidden", navName !== "booking");
+      els.viewChildren.classList.toggle("hidden", navName !== "children");
+
+      renderAll();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    els.navItems.forEach((btn) => {
+      btn.addEventListener("click", () => setActiveNav(btn.dataset.nav));
+    });
+
+    els.navTodayBtn.addEventListener("click", () => {
+      focusDateStr = todayStr;
+      els.focusDateInput.value = todayStr;
+      if (!els.editLessonId.value) els.lessonDate.value = todayStr;
+      setActiveNav("calendar");
+    });
+
+    els.focusDateInput.value = focusDateStr;
+    els.lessonDate.value = focusDateStr;
+
+    els.focusDateInput.addEventListener("change", () => {
+      focusDateStr = els.focusDateInput.value || todayStr;
+      if (!els.editLessonId.value) els.lessonDate.value = focusDateStr;
+      renderNotebook();
+    });
+
+    els.prevWeekBtn.addEventListener("click", () => {
+      focusDateStr = addDays(focusDateStr, -7);
+      els.focusDateInput.value = focusDateStr;
+      renderNotebook();
+    });
+
+    els.nextWeekBtn.addEventListener("click", () => {
+      focusDateStr = addDays(focusDateStr, 7);
+      els.focusDateInput.value = focusDateStr;
+      renderNotebook();
+    });
+
+    els.lessonChildSelect.addEventListener("change", () => {
+      if (els.editLessonId.value) {
+        updatePrepaidUIForForm(false);
+        return;
+      }
+      const ch = getChildById(els.lessonChildSelect.value);
+      if (ch) {
+        els.lessonDuration.value = ch.defaultDuration || DEFAULT_DURATION;
+        els.lessonPrice.value = ch.defaultPrice ?? DEFAULT_PRICE;
+      }
+      updatePrepaidUIForForm(true);
+    });
+
+    els.lessonPrice.addEventListener("input", () => {
+      if (els.editLessonId.value) return;
+      const cnt = Math.max(0, Number(els.lessonPaidSessionsCount.value) || 0);
+      const price = Number(els.lessonPrice.value) || 0;
+      if (els.lessonHappened.value === "yes" && cnt > 0) {
+        els.lessonPaidAmount.value = String(price * cnt);
+      }
+    });
+
+    els.lessonPaidSessionsCount.addEventListener("input", () => {
+      if (els.editLessonId.value) return;
+      const cnt = Math.max(0, Number(els.lessonPaidSessionsCount.value) || 0);
+      const price = Number(els.lessonPrice.value) || 0;
+      if (cnt > 1) {
+        els.lessonHappened.value = "yes";
+        els.lessonPaidAmount.value = String(price * cnt);
+      } else if (cnt === 1 && els.lessonHappened.value === "yes") {
+        els.lessonPaidAmount.value = String(price);
+      } else if (cnt === 0) {
+        els.lessonPaidAmount.value = "0";
+      }
+    });
+
+    els.lessonHappened.addEventListener("change", () => {
+      if (els.editLessonId.value) return;
+      const hap = els.lessonHappened.value;
+      const price = Number(els.lessonPrice.value) || 0;
+      if (hap === "prepaid" || hap === "no") {
+        els.lessonPaidSessionsCount.value = "0";
+        els.lessonPaidAmount.value = "0";
+      } else if (hap === "yes") {
+        const cnt = Math.max(1, Number(els.lessonPaidSessionsCount.value) || 1);
+        els.lessonPaidSessionsCount.value = String(cnt);
+        if (!Number(els.lessonPaidAmount.value)) {
+          els.lessonPaidAmount.value = String(price * cnt);
+        }
+      }
+    });
+
+    // Файлы в карточке ребенка
+    els.childFilesInput.addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files || []);
+      for (const f of files) {
+        if (f.size > MAX_FILE_BYTES) {
+          alert(`Файл "${f.name}" больше 1.5 МБ.`);
+          continue;
+        }
+        try {
+          const dataUrl = await readFileDataUrl(f);
+          draftFiles.push({
+            id: "f_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            name: f.name,
+            type: f.type || "application/octet-stream",
+            size: f.size,
+            dataUrl
+          });
+        } catch {
+          alert(`Не удалось прочитать файл "${f.name}".`);
+        }
+      }
+      els.childFilesInput.value = "";
+      renderDraftFiles();
+    });
+
+    function readFileDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("read error"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderDraftFiles() {
+      if (!draftFiles.length) {
+        els.draftFilesList.innerHTML = "";
+        return;
+      }
+      els.draftFilesList.innerHTML = draftFiles
+        .map(
+          (f, idx) => `
+          <div class="att-row">
+            <span style="font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.name)}</span>
+            <button type="button" class="ui-btn danger-soft" style="padding:3px 8px;" onclick="removeDraftFile(${idx})">✕</button>
+          </div>
+        `
+        )
+        .join("");
+    }
+
+    window.removeDraftFile = function (idx) {
+      draftFiles.splice(idx, 1);
+      renderDraftFiles();
+    };
+
+    // Карточки детей
+    els.childForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const childFullName = els.childFullName.value.trim();
+      const parentFullName = els.parentFullName.value.trim();
+      const parentPhone = els.parentPhone.value.trim();
+      const defaultDuration = Number(els.childDefaultDuration.value) || DEFAULT_DURATION;
+      const defaultPrice = Number(els.childDefaultPrice.value) || 0;
+      const notes = els.childNotes.value.trim();
+
+      if (!childFullName || !parentFullName || !parentPhone) {
+        alert("Заполните имя ребенка, имя родителя и телефон.");
+        return;
+      }
+
+      if (els.editChildId.value) {
+        state.children = state.children.map((c) =>
+          c.id === els.editChildId.value
+            ? {
+                ...c,
+                childFullName,
+                parentFullName,
+                parentPhone,
+                defaultDuration,
+                defaultPrice,
+                notes,
+                attachments: [...draftFiles]
+              }
+            : c
+        );
+        saveState();
+        resetChildForm();
+        renderAll();
+        showBanner(els.childFeedback, "Карточка обновлена!");
+      } else {
+        const newChild = {
+          id: "ch_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          childFullName,
+          parentFullName,
+          parentPhone,
+          defaultDuration,
+          defaultPrice,
+          notes,
+          attachments: [...draftFiles]
+        };
+        state.children.push(newChild);
+        saveState();
+        resetChildForm();
+        renderAll();
+        els.lessonChildSelect.value = newChild.id;
+        showBanner(els.childFeedback, `Карточка «${childFullName}» добавлена!`);
+      }
+    });
+
+    function resetChildForm() {
+      els.editChildId.value = "";
+      els.childFormTitle.textContent = "Новая карточка ребенка";
+      els.childSubmitBtn.textContent = "Добавить карточку ребенка";
+      els.cancelChildEditBtn.classList.add("hidden");
+      els.childFullName.value = "";
+      els.parentFullName.value = "";
+      els.parentPhone.value = "";
+      els.childDefaultDuration.value = String(DEFAULT_DURATION);
+      els.childDefaultPrice.value = String(DEFAULT_PRICE);
+      els.childNotes.value = "";
+      draftFiles = [];
+      renderDraftFiles();
+    }
+
+    els.cancelChildEditBtn.addEventListener("click", resetChildForm);
+
+    window.editChild = function (id) {
+      const ch = getChildById(id);
+      if (!ch) return;
+      setActiveNav("children");
+      els.editChildId.value = ch.id;
+      els.childFullName.value = ch.childFullName;
+      els.parentFullName.value = ch.parentFullName;
+      els.parentPhone.value = ch.parentPhone;
+      els.childDefaultDuration.value = ch.defaultDuration || DEFAULT_DURATION;
+      els.childDefaultPrice.value = ch.defaultPrice ?? DEFAULT_PRICE;
+      els.childNotes.value = ch.notes || "";
+      draftFiles = Array.isArray(ch.attachments) ? [...ch.attachments] : [];
+      renderDraftFiles();
+      els.childFormTitle.textContent = "Редактирование карточки";
+      els.childSubmitBtn.textContent = "Сохранить изменения";
+      els.cancelChildEditBtn.classList.remove("hidden");
+    };
+
+    window.deleteChild = function (id) {
+      if (!confirm("Удалить карточку ребенка?")) return;
+      state.children = state.children.filter((c) => c.id !== id);
+      saveState();
+      renderAll();
+    };
+
+    window.quickBookForChild = function (childId) {
+      const ch = getChildById(childId);
+      if (!ch) return;
+      resetLessonForm();
+      setActiveNav("booking");
+      els.lessonChildSelect.value = ch.id;
+      els.lessonDuration.value = ch.defaultDuration || DEFAULT_DURATION;
+      els.lessonPrice.value = ch.defaultPrice ?? DEFAULT_PRICE;
+      updatePrepaidUIForForm(true);
+    };
+
+    els.searchChildInput.addEventListener("input", renderChildrenList);
+
+    // Запись на занятие
+    els.lessonForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const childId = els.lessonChildSelect.value;
+      const date = els.lessonDate.value;
+      const time = els.lessonTime.value;
+      const duration = Number(els.lessonDuration.value) || DEFAULT_DURATION;
+      const price = Number(els.lessonPrice.value) || 0;
+      let happened = els.lessonHappened.value || "pending";
+      const paidSessionsCount = Math.max(0, Number(els.lessonPaidSessionsCount.value) || 0);
+      let paidAmount = Number(els.lessonPaidAmount.value);
+      if (Number.isNaN(paidAmount)) paidAmount = 0;
+
+      if (paidAmount > 0 && happened === "pending") {
+        happened = "yes";
+      }
+      if (happened === "no" || happened === "prepaid") {
+        paidAmount = 0;
+      }
+
+      const note = els.lessonNote.value.trim();
+
+      if (!childId || !date || !time) {
+        alert("Выберите ребенка, укажите дату и время.");
+        return;
+      }
+
+      const ch = getChildById(childId);
+      const childName = ch ? ch.childFullName : "Ученик";
+
+      if (els.editLessonId.value) {
+        state.lessons = state.lessons.map((l) =>
+          l.id === els.editLessonId.value
+            ? { ...l, childId, childName, date, time, duration, price, happened, paidSessionsCount, paidAmount, note }
+            : l
+        );
+      } else {
+        state.lessons.push({
+          id: "ls_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          childId,
+          childName,
+          date,
+          time,
+          duration,
+          price,
+          happened,
+          paidSessionsCount,
+          paidAmount,
+          note
+        });
+      }
+
+      focusDateStr = date;
+      els.focusDateInput.value = focusDateStr;
+      saveState();
+      resetLessonForm();
+      setActiveNav("calendar");
+    });
+
+    function resetLessonForm() {
+      els.editLessonId.value = "";
+      els.lessonFormTitle.textContent = "Записать на занятие";
+      els.lessonSubmitBtn.textContent = "Сохранить в расписание";
+      els.cancelLessonEditBtn.classList.add("hidden");
+      els.lessonDate.value = focusDateStr;
+      els.lessonTime.value = "";
+      els.lessonPaidSessionsCount.value = "1";
+      els.lessonPaidAmount.value = "0";
+      els.lessonHappened.value = "pending";
+      els.lessonNote.value = "";
+
+      const ch = getChildById(els.lessonChildSelect.value);
+      els.lessonDuration.value = ch ? ch.defaultDuration || DEFAULT_DURATION : String(DEFAULT_DURATION);
+      els.lessonPrice.value = ch ? ch.defaultPrice ?? DEFAULT_PRICE : String(DEFAULT_PRICE);
+      updatePrepaidUIForForm(true);
+    }
+
+    els.cancelLessonEditBtn.addEventListener("click", resetLessonForm);
+
+    window.editLesson = function (id) {
+      const raw = state.lessons.find((x) => x.id === id);
+      if (!raw) return;
+      const l = normalizeLesson(raw);
+      setActiveNav("booking");
+      els.editLessonId.value = l.id;
+      if (l.childId && getChildById(l.childId)) {
+        els.lessonChildSelect.value = l.childId;
+      }
+      els.lessonDate.value = l.date;
+      els.lessonTime.value = l.time;
+      els.lessonDuration.value = l.duration || DEFAULT_DURATION;
+      els.lessonPrice.value = l.price ?? DEFAULT_PRICE;
+      els.lessonPaidSessionsCount.value = String(l.paidSessionsCount ?? 0);
+      els.lessonPaidAmount.value = String(l.paidAmount ?? 0);
+      els.lessonHappened.value = l.happened;
+      els.lessonNote.value = l.note || "";
+      els.lessonFormTitle.textContent = "Редактирование занятия";
+      els.lessonSubmitBtn.textContent = "Обновить занятие";
+      els.cancelLessonEditBtn.classList.remove("hidden");
+      updatePrepaidUIForForm(false);
+    };
+
+    window.changeLessonHappened = function (id, newVal) {
+      state.lessons = state.lessons.map((raw) => {
+        if (raw.id !== id) return raw;
+        const l = normalizeLesson(raw);
+        let nextPaidAmount = Number(l.paidAmount || 0);
+        let nextPaidCount = Number(l.paidSessionsCount || 0);
+
+        if (newVal === "yes") {
+          const cnt = Math.max(1, nextPaidCount);
+          nextPaidCount = cnt;
+          if (!nextPaidAmount) {
+            nextPaidAmount = Number(l.price || 0) * cnt;
+          }
+        } else if (newVal === "prepaid" || newVal === "no") {
+          nextPaidAmount = 0;
+          nextPaidCount = 0;
+        }
+
+        return { ...l, happened: newVal, paidAmount: nextPaidAmount, paidSessionsCount: nextPaidCount };
+      });
+      saveState();
+      renderNotebook();
+    };
+
+    window.deleteLesson = function (id) {
+      if (els.editLessonId.value === id) resetLessonForm();
+      state.lessons = state.lessons.filter((l) => l.id !== id);
+      saveState();
+      renderNotebook();
+    };
+
+    function dataUrlToBuffer(dataUrl) {
+      const b64 = (dataUrl.split(",")[1] || "").trim();
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    function clearBlob() {
+      if (activeBlobUrl) {
+        URL.revokeObjectURL(activeBlobUrl);
+        activeBlobUrl = null;
+      }
+    }
+
+    window.openAttachment = async function (childId, attId) {
+      const ch = getChildById(childId);
+      if (!ch || !Array.isArray(ch.attachments)) return;
+      const att = ch.attachments.find((a) => a.id === attId);
+      if (!att) return;
+
+      clearBlob();
+      els.modalTitle.textContent = `${att.name} — ${ch.childFullName}`;
+      els.modalDownloadBtn.href = att.dataUrl;
+      els.modalDownloadBtn.download = att.name;
+
+      const lower = att.name.toLowerCase();
+
+      if (att.type.startsWith("image/")) {
+        els.modalContent.innerHTML = `<img src="${att.dataUrl}" class="modal-img" alt="${escapeHtml(att.name)}" />`;
+      } else if (lower.endsWith(".docx") && window.mammoth && typeof window.mammoth.convertToHtml === "function") {
+        els.modalContent.innerHTML = `<p style="color:#64748b;">Открываю документ...</p>`;
+        try {
+          const buf = dataUrlToBuffer(att.dataUrl);
+          const res = await window.mammoth.convertToHtml({ arrayBuffer: buf });
+          els.modalContent.innerHTML = `<div class="modal-docx">${res.value || "<p><em>Пустой документ</em></p>"}</div>`;
+        } catch {
+          els.modalContent.innerHTML = `<p style="color:#64748b;">Не удалось открыть .docx. Нажмите «Скачать».</p>`;
+        }
+      } else if (att.type === "application/pdf" || lower.endsWith(".pdf")) {
+        const buf = dataUrlToBuffer(att.dataUrl);
+        const blob = new Blob([buf], { type: "application/pdf" });
+        activeBlobUrl = URL.createObjectURL(blob);
+        els.modalContent.innerHTML = `<iframe src="${activeBlobUrl}" class="modal-pdf"></iframe>`;
+      } else if (
+        att.type.startsWith("text/") ||
+        lower.endsWith(".txt") ||
+        lower.endsWith(".csv") ||
+        lower.endsWith(".md") ||
+        lower.endsWith(".json")
+      ) {
+        const buf = dataUrlToBuffer(att.dataUrl);
+        const txt = new TextDecoder("utf-8").decode(new Uint8Array(buf));
+        els.modalContent.innerHTML = `<div class="modal-text">${escapeHtml(txt)}</div>`;
+      } else {
+        els.modalContent.innerHTML = `<p style="color:#64748b;">Формат <strong>${escapeHtml(att.name)}</strong> лучше сохранять как <strong>.docx</strong>, <strong>.txt</strong>, <strong>.pdf</strong> или фото. Нажмите «Скачать».</p>`;
+      }
+
+      els.fileModal.classList.remove("hidden");
+    };
+
+    function closeModal() {
+      clearBlob();
+      els.modalContent.innerHTML = "";
+      els.fileModal.classList.add("hidden");
+    }
+
+    els.closeModalBtn.addEventListener("click", closeModal);
+    els.fileModal.addEventListener("click", (e) => {
+      if (e.target === els.fileModal) closeModal();
+    });
+
+    function renderChildOptions() {
+      const prev = els.lessonChildSelect.value;
+      const sorted = [...state.children].sort((a, b) => a.childFullName.localeCompare(b.childFullName, "ru"));
+
+      if (!sorted.length) {
+        els.lessonChildSelect.innerHTML = `<option value="">Сначала добавьте ребенка во вкладке «Дети»</option>`;
+        els.lessonSubmitBtn.disabled = true;
+      } else {
+        els.lessonSubmitBtn.disabled = false;
+        els.lessonChildSelect.innerHTML = sorted
+          .map((c) => {
+            const rem = getRemainingPrepaidCredits(c.id, els.editLessonId.value || null);
+            const remTxt = rem > 0 ? ` · предоплата: ${rem} з.` : "";
+            return `<option value="${c.id}">${escapeHtml(c.childFullName)} (${escapeHtml(c.parentPhone)})${remTxt}</option>`;
+          })
+          .join("");
+
+        if (prev && sorted.some((c) => c.id === prev)) {
+          els.lessonChildSelect.value = prev;
+        } else if (!els.editLessonId.value) {
+          els.lessonChildSelect.value = sorted[0].id;
+          els.lessonDuration.value = sorted[0].defaultDuration || DEFAULT_DURATION;
+          els.lessonPrice.value = sorted[0].defaultPrice ?? DEFAULT_PRICE;
+        }
+      }
+
+      updatePrepaidUIForForm(false);
+    }
+
+    function renderChildrenList() {
+      els.childrenCountBadge.textContent = state.children.length;
+      const q = (els.searchChildInput.value || "").trim().toLowerCase();
+      const { remainingByChild } = computePrepaidMap();
+
+      const list = state.children
+        .filter((c) => {
+          if (!q) return true;
+          return (
+            c.childFullName.toLowerCase().includes(q) ||
+            c.parentFullName.toLowerCase().includes(q) ||
+            c.parentPhone.toLowerCase().includes(q) ||
+            (c.notes || "").toLowerCase().includes(q)
+          );
+        })
+        .sort((a, b) => a.childFullName.localeCompare(b.childFullName, "ru"));
+
+      if (!list.length) {
+        els.childrenListContainer.innerHTML = `<p style="color:#64748b; font-size:0.9rem;">Карточек пока нет. Заполните форму выше.</p>`;
+        return;
+      }
+
+      els.childrenListContainer.innerHTML = list
+        .map((c) => {
+          const rem = remainingByChild.get(c.id) || 0;
+          const prepaidBadge =
+            rem > 0 ? `<div class="child-prepaid-tag">Остаток предоплаты: ${rem} занят.</div>` : "";
+
+          const atts = Array.isArray(c.attachments) ? c.attachments : [];
+          const attsHtml = atts.length
+            ? `<div class="att-list">` +
+              atts
+                .map((a) => {
+                  const thumb = a.type.startsWith("image/")
+                    ? `<img src="${a.dataUrl}" class="att-thumb" alt="" />`
+                    : `<span>📄</span>`;
+                  return `
+                    <div class="att-row">
+                      <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                        ${thumb}
+                        <button type="button" class="att-open-btn" onclick="openAttachment('${c.id}', '${a.id}')">${escapeHtml(a.name)}</button>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join("") +
+              `</div>`
+            : "";
+
+          return `
+            <div class="child-item">
+              <div class="child-item-name">${escapeHtml(c.childFullName)}</div>
+              <div class="child-item-meta">Родитель: ${escapeHtml(c.parentFullName)} · ${escapeHtml(c.parentPhone)}</div>
+              <div class="child-item-meta">По умолчанию: ${c.defaultDuration || DEFAULT_DURATION} мин · ${formatMoney(c.defaultPrice)}</div>
+              ${prepaidBadge}
+              ${c.notes ? `<div class="child-item-note">${escapeHtml(c.notes)}</div>` : ""}
+              ${attsHtml}
+              <div class="child-item-btns">
+                <button type="button" class="ui-btn primary" onclick="quickBookForChild('${c.id}')">+ Записать</button>
+                <button type="button" class="ui-btn" onclick="editChild('${c.id}')">Изменить</button>
+                <button type="button" class="ui-btn danger-soft" onclick="deleteChild('${c.id}')">Удалить</button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    function renderNotebook() {
+      const monday = getMonday(focusDateStr);
+      const saturday = addDays(monday, 5);
+      const sunday = addDays(monday, 6);
+
+      els.monthTitle.textContent = getMonthShortRu(monday);
+      els.weekSubTitle.textContent = `${formatDateRu(monday)} — ${formatDateRu(saturday)}`;
+
+      const weekLessons = state.lessons.filter((l) => l.date >= monday && l.date <= sunday);
+      const earnedSum = weekLessons.reduce((acc, raw) => acc + getActualReceived(raw), 0);
+      const plannedSum = weekLessons
+        .filter((raw) => normalizeLesson(raw).happened !== "no")
+        .reduce((acc, raw) => acc + Number(raw.price || 0), 0);
+
+      els.earnedWeekVal.textContent = formatMoney(earnedSum);
+      els.countWeekVal.textContent = String(weekLessons.length);
+
+      const { map: prepaidMap } = computePrepaidMap();
+      const dayNamesShort = ["пн", "вт", "ср", "чт", "пт", "сб"];
+
+      const buildDayBlock = (dayIdx) => {
+        const dStr = addDays(monday, dayIdx);
+        const dayNum = dStr.split("-")[2];
+        const isToday = dStr === todayStr;
+
+        const items = state.lessons
+          .filter((l) => l.date === dStr)
+          .sort((a, b) => a.time.localeCompare(b.time));
+
+        const eventsHtml = items
+          .map((raw) => {
+            const l = normalizeLesson(raw);
+            const ch = getChildById(l.childId);
+            const name = ch ? ch.childFullName : l.childName;
+            const hap = l.happened;
+            const hapClass =
+              hap === "yes"
+                ? "happened-yes"
+                : hap === "prepaid"
+                  ? "happened-prepaid"
+                  : hap === "no"
+                    ? "happened-no"
+                    : "";
+
+            const packInfo = prepaidMap.get(l.id);
+            const packBadgeHtml = packInfo
+              ? `<span class="ev-pack-tag">${escapeHtml(packInfo.label)}</span>`
+              : "";
+
+            const received = getActualReceived(l);
+            const moneyLabel =
+              hap === "prepaid"
+                ? `0 ₽ (${packInfo ? escapeHtml(packInfo.label) : "по предоплате"})`
+                : received > 0
+                  ? `${formatMoney(received)}${packInfo ? ` · ${escapeHtml(packInfo.label)}` : ""}`
+                  : `${formatMoney(l.price)} (${l.duration || DEFAULT_DURATION}м)`;
+
+            return `
+              <div class="ev-card ${hapClass}">
+                <div class="ev-head">
+                  <div class="ev-main-text" onclick="editLesson('${l.id}')" title="Нажмите для редактирования">
+                    <span class="ev-time">${escapeHtml(l.time)}</span> ${escapeHtml(name)}${packBadgeHtml}
+                  </div>
+                  <button type="button" class="ev-del-btn" onclick="deleteLesson('${l.id}')" title="Удалить событие">✕</button>
+                </div>
+                <div class="ev-controls">
+                  <span class="ev-price">${moneyLabel}</span>
+                  <select class="ev-select" onchange="changeLessonHappened('${l.id}', this.value)" title="Статус занятия">
+                    <option value="pending" ${hap === "pending" ? "selected" : ""}>Ожидается</option>
+                    <option value="yes" ${hap === "yes" ? "selected" : ""}>Было</option>
+                    <option value="prepaid" ${hap === "prepaid" ? "selected" : ""}>По предоплате</option>
+                    <option value="no" ${hap === "no" ? "selected" : ""}>Не было</option>
+                  </select>
+                </div>
+                ${l.note ? `<div class="ev-note">${escapeHtml(l.note)}</div>` : ""}
+              </div>
+            `;
+          })
+          .join("");
+
+        return `
+          <div class="day-row ${isToday ? "is-today" : ""}">
+            <div class="day-badge">
+              <span class="day-wd">${dayNamesShort[dayIdx]}</span>
+              <span class="day-num">${dayNum}</span>
+            </div>
+            <div class="day-events">
+              ${eventsHtml || `<div class="empty-day-hint">—</div>`}
+            </div>
+          </div>
+        `;
+      };
+
+      els.leftPageCol.innerHTML = [0, 1, 2].map(buildDayBlock).join("");
+
+      const summaryBlock = `
+        <div class="summary-sheet">
+          <div class="summary-sheet-title">Итоги недели</div>
+          <div class="summary-line">
+            <span>По стоимости занятий:</span>
+            <span>${formatMoney(plannedSum)}</span>
+          </div>
+          <div class="summary-line">
+            <span>Заработано за неделю:</span>
+            <span>${formatMoney(earnedSum)}</span>
+          </div>
+        </div>
+      `;
+
+      els.rightPageCol.innerHTML = [3, 4, 5].map(buildDayBlock).join("") + summaryBlock;
+    }
+
+    function renderAll() {
+      renderChildOptions();
+      renderChildrenList();
+      renderNotebook();
+    }
+
+    els.exportBtn.addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ezhednevnik-defectologa-v9-${todayStr}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    els.importBtn.addEventListener("click", () => els.importFileInput.click());
+
+    els.importFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!parsed || !Array.isArray(parsed.children) || !Array.isArray(parsed.lessons)) {
+            alert("Неверный формат файла.");
+            return;
+          }
+          state.children = parsed.children;
+          state.lessons = parsed.lessons.map(normalizeLesson);
+          saveState();
+          renderAll();
+          alert("Данные загружены!");
+        } catch {
+          alert("Не удалось прочитать файл.");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
